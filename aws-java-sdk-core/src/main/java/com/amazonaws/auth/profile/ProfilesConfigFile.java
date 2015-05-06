@@ -15,6 +15,7 @@
 package com.amazonaws.auth.profile;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -111,6 +112,19 @@ public class ProfilesConfigFile {
     public ProfilesConfigFile(File file) throws AmazonClientException {
         loadProfiles(file);
     }
+    
+    /**
+     * Loads the AWS credential profiles from an input stream. This is
+     * useful when the credentials are in memory rather than on disk
+     */
+    public ProfilesConfigFile(java.io.InputStream is) throws AmazonClientException {
+        try {
+			loadProfiles(is);
+		} catch (IOException e) {
+			throw new IllegalArgumentException(
+                    "Could not read credentials from input stream");
+		}
+    }
 
     /**
      * Returns the AWS credentials for the specified profile.
@@ -174,6 +188,10 @@ public class ProfilesConfigFile {
 
     private void loadProfiles(File file) {
         profilesByName.putAll(ProfilesConfigFileLoader.loadProfiles(file));
+    }
+    
+    private void loadProfiles(java.io.InputStream is) throws IOException {
+        profilesByName.putAll(ProfilesConfigFileLoader.loadProfiles(is));
     }
 
 }

@@ -65,7 +65,7 @@ public class ProfilesConfigFileLoader {
      * @param is input stream from where the profile details are read.
      * @throws IOException
      */
-    private static Map<String, Profile> loadProfiles(InputStream is) throws IOException {
+    public static Map<String, Profile> loadProfiles(InputStream is) throws IOException {
         ProfilesConfigFileLoaderHelper helper = new ProfilesConfigFileLoaderHelper();
         Map<String, Map<String, String>> allProfileProperties = helper.parseProfileProperties(new Scanner(is));
 
