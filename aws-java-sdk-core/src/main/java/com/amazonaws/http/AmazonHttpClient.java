@@ -61,9 +61,11 @@ import org.apache.http.annotation.ThreadSafe;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.conn.ClientConnectionManager;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.pool.ConnPoolControl;
 import org.apache.http.pool.PoolStats;
 import org.apache.http.protocol.BasicHttpContext;
@@ -144,7 +146,7 @@ public class AmazonHttpClient {
     }
 
     /** Internal client for sending HTTP requests */
-    private final HttpClient httpClient;
+    private final CloseableHttpClient httpClient;
 
     /** Client configuration options, such as proxy settings, max retries, etc. */
     private final ClientConfiguration config;
@@ -198,7 +200,7 @@ public class AmazonHttpClient {
      */
     AmazonHttpClient(
             ClientConfiguration config,
-            HttpClient httpClient,
+            CloseableHttpClient httpClient,
             RequestMetricCollector requestMetricCollector) {
 
         this.config = config;
@@ -238,20 +240,6 @@ public class AmazonHttpClient {
          */
         if (System.getProperty(DISABLE_CERT_CHECKING_SYSTEM_PROPERTY) != null) {
             return;
-        }
-
-        try {
-            SchemeRegistry schemeRegistry = httpClient.getConnectionManager().getSchemeRegistry();
-            SSLSocketFactory sf = config.getApacheHttpClientConfig().getSslSocketFactory();
-            if (sf == null) {
-                sf = new SdkTLSSocketFactory(
-                        SSLContext.getDefault(),
-                        SSLSocketFactory.BROWSER_COMPATIBLE_HOSTNAME_VERIFIER);
-            }
-            Scheme https = new Scheme("https", 443, sf);
-            schemeRegistry.register(https);
-        } catch (NoSuchAlgorithmException e) {
-            throw new AmazonClientException("Unable to access default SSL context to disable strict hostname verification");
         }
     }
     /**
@@ -871,8 +859,13 @@ public class AmazonHttpClient {
      * Once a client has been shutdown, it cannot be used to make more requests.
      */
     public void shutdown() {
-        IdleConnectionReaper.removeConnectionManager(httpClient.getConnectionManager());
-        httpClient.getConnectionManager().shutdown();
+        IdleConnectionReaper.removeConnectionManager((HttpClientConnectionManager)httpClient.getConnectionManager());
+        try {
+			httpClient.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
 
     /**

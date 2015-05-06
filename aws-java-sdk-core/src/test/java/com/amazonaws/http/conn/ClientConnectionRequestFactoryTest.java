@@ -16,35 +16,33 @@ package com.amazonaws.http.conn;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.http.conn.ClientConnectionRequest;
+import org.apache.http.HttpClientConnection;
 import org.apache.http.conn.ConnectionPoolTimeoutException;
-import org.apache.http.conn.ManagedClientConnection;
+import org.apache.http.conn.ConnectionRequest;
 import org.junit.Test;
 
 public class ClientConnectionRequestFactoryTest {
-    ClientConnectionRequest noop = new ClientConnectionRequest() {
-        @Override
-        public ManagedClientConnection getConnection(long timeout, TimeUnit tunit)
-                throws InterruptedException, ConnectionPoolTimeoutException {
-            return null;
-        }
+	ConnectionRequest noop = new ConnectionRequest() {
 
-        @Override
-        public void abortRequest() {
-        }
+		@Override public boolean cancel() {return false;}
+		@Override public HttpClientConnection get(long timeout, TimeUnit tunit)
+				throws InterruptedException, ExecutionException,
+				ConnectionPoolTimeoutException {return null;}
+		
     };
 
     @Test
     public void wrapOnce() {
-        ClientConnectionRequest wrapped = ClientConnectionRequestFactory.wrap(noop);
+    	ConnectionRequest wrapped = ClientConnectionRequestFactory.wrap(noop);
         assertTrue(wrapped instanceof Wrapped);
     }
 
     @Test(expected=IllegalArgumentException.class)
     public void wrapTwice() {
-        ClientConnectionRequest wrapped = ClientConnectionRequestFactory.wrap(noop);
+    	ConnectionRequest wrapped = ClientConnectionRequestFactory.wrap(noop);
         ClientConnectionRequestFactory.wrap(wrapped);
     }
 }

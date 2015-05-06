@@ -16,18 +16,17 @@ package com.amazonaws.http;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.http.impl.conn.PoolingClientConnectionManager;
-import org.apache.http.impl.conn.SchemeRegistryFactory;
-import org.apache.http.params.HttpParams;
-
+import org.apache.http.config.Registry;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import com.amazonaws.ClientConfiguration;
 
 /** Responsible for creating and configuring instances of Apache HttpClient4's Connection Manager. */
 class ConnectionManagerFactory {
 
-    public static PoolingClientConnectionManager createPoolingClientConnManager( ClientConfiguration config, HttpParams httpClientParams ) {
-        PoolingClientConnectionManager connectionManager = new PoolingClientConnectionManager(
-                SchemeRegistryFactory.createDefault(),
+    public static PoolingHttpClientConnectionManager createPoolingClientConnManager(ClientConfiguration config, Registry<ConnectionSocketFactory> socketFactoryRegistry) {
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(
+        		socketFactoryRegistry, null, null, null,
                 config.getConnectionTTL(), TimeUnit.MILLISECONDS);
         connectionManager.setDefaultMaxPerRoute(config.getMaxConnections());
         connectionManager.setMaxTotal(config.getMaxConnections());

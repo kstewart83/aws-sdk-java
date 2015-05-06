@@ -14,24 +14,57 @@
  */
 package com.amazonaws.http.impl.client;
 
-import org.apache.http.conn.ClientConnectionManager;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.HttpParams;
-import org.apache.http.protocol.HttpRequestExecutor;
-
+import org.apache.http.auth.AuthSchemeProvider;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.impl.auth.BasicSchemeFactory;
+import org.apache.http.impl.auth.DigestSchemeFactory;
+import org.apache.http.impl.auth.win.WindowsCredentialsProvider;
+import org.apache.http.impl.auth.win.WindowsNTLMSchemeFactory;
+import org.apache.http.impl.auth.win.WindowsNegotiateSchemeFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.SystemDefaultCredentialsProvider;
+import org.apache.http.impl.client.WinHttpClients;
 import com.amazonaws.http.conn.ClientConnectionManagerFactory;
 import com.amazonaws.http.protocol.SdkHttpRequestExecutor;
 
-public class SdkHttpClient extends DefaultHttpClient {
-    public SdkHttpClient(
-            final ClientConnectionManager conman,
-            final HttpParams params) {
-        super(ClientConnectionManagerFactory.wrap(conman), params);
+public class SdkHttpClient {
+    
+    private static HttpClientBuilder createBuilder(HttpClientConnectionManager connectionManager) {
+    	HttpClientBuilder builder;
+    	if (WinHttpClients.isWinAuthAvailable()) {
+            final Registry<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider>create()
+                    .register(AuthSchemes.BASIC, new BasicSchemeFactory())
+                    .register(AuthSchemes.DIGEST, new DigestSchemeFactory())
+                    .register(AuthSchemes.NTLM, new WindowsNTLMSchemeFactory(null))
+                    .register(AuthSchemes.SPNEGO, new WindowsNegotiateSchemeFactory(null))
+                    .build();
+            final CredentialsProvider credsProvider = new WindowsCredentialsProvider(new SystemDefaultCredentialsProvider());
+            builder = HttpClientBuilder.create()
+                    .setDefaultCredentialsProvider(credsProvider)
+                    .setDefaultAuthSchemeRegistry(authSchemeRegistry);
+        } else {
+            builder = HttpClientBuilder.create();
+        }
+    	
+    	return builder
+    			.setRequestExecutor(new SdkHttpRequestExecutor())
+    			.setConnectionManager(ClientConnectionManagerFactory.wrap(connectionManager));
     }
-
-    @Override
-    protected HttpRequestExecutor createRequestExecutor() {
-        return new SdkHttpRequestExecutor();
+    
+    public static HttpClientBuilder custom(HttpClientConnectionManager connectionManager) {
+    	return createBuilder(connectionManager);
     }
-
+    
+    public static CloseableHttpClient createDefault(HttpClientConnectionManager connectionManager) {
+    	return createBuilder(connectionManager).build();
+    }
+    
+    public static CloseableHttpClient createSystem(HttpClientConnectionManager connectionManager) {
+    	return createBuilder(connectionManager).useSystemProperties().build();
+    }
 }

@@ -13,42 +13,44 @@
  * limitations under the License.
  */
 package com.amazonaws.http.conn.ssl;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.annotation.ThreadSafe;
-import org.apache.http.conn.ConnectTimeoutException;
-import org.apache.http.conn.ssl.SSLSocketFactory;
-import org.apache.http.conn.ssl.X509HostnameVerifier;
-import org.apache.http.params.HttpParams;
-
-import com.amazonaws.internal.SdkSSLSocket;
-import com.amazonaws.internal.SdkSocket;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 
 /**
  * Used to enforce the preferred TLS protocol during SSL handshake.
  */
 @ThreadSafe
-public class SdkTLSSocketFactory extends SSLSocketFactory {
+public class SdkTLSSocketFactory extends SSLConnectionSocketFactory {
     private static final Log log = LogFactory.getLog(SdkTLSSocketFactory.class);
     
-    public SdkTLSSocketFactory(final SSLContext sslContext,
-            final X509HostnameVerifier hostnameVerifier) {
-        super(sslContext, hostnameVerifier);
+    /*
+    public SdkTLSSocketFactory(
+            final SSLContext sslContext,
+            final HostnameVerifier hostnameVerifier
+            ) {
+    	super(sslContext, hostnameVerifier);
+    }*/
+    
+    public SdkTLSSocketFactory(
+            final SSLContext sslContext,
+            final String[] supportedProtocols,
+            final String[] supportedCipherSuites,
+            final HostnameVerifier hostnameVerifier) {
+        super(sslContext,
+                supportedProtocols, supportedCipherSuites, hostnameVerifier);
     }
+
 
     /**
      * {@inheritDoc}
@@ -93,6 +95,8 @@ public class SdkTLSSocketFactory extends SSLSocketFactory {
             }
         }
     }
+
+    
     /**
      * Returns true if the given element exists in the given array;
      * false otherwise.
@@ -103,67 +107,5 @@ public class SdkTLSSocketFactory extends SSLSocketFactory {
                 return true;
         }
         return false;
-    }
-
-    @Override
-    public Socket connectSocket(
-            final Socket socket,
-            final InetSocketAddress remoteAddress,
-            final InetSocketAddress localAddress,
-            final HttpParams params)
-            throws IOException, UnknownHostException, ConnectTimeoutException {
-        if (log.isDebugEnabled())
-            log.debug("connecting to " + remoteAddress.getAddress() + ":"
-                    + remoteAddress.getPort());
-        verifyMasterSecret(
-            super.connectSocket(socket, remoteAddress, localAddress, params));
-        if (socket instanceof SSLSocket)
-            return new SdkSSLSocket((SSLSocket)socket);
-        return new SdkSocket(socket);
-    }
-
-    /**
-     * Double check the master secret of an SSL session must not be null, or
-     * else a {@link SecurityException} will be thrown.
-     * @param sock connected socket
-     */
-    private void verifyMasterSecret(final Socket sock) {
-        if (sock instanceof SSLSocket) {
-            SSLSocket ssl = (SSLSocket)sock;
-            SSLSession session = ssl.getSession();
-            if (session != null) {
-                String className = session.getClass().getName();
-                if ("sun.security.ssl.SSLSessionImpl".equals(className)) {
-                    try {
-                        Class<?> clazz = Class.forName(className);
-                        Method method = clazz.getDeclaredMethod("getMasterSecret");
-                        method.setAccessible(true);
-                        Object masterSecret = method.invoke(session);
-                        if (masterSecret == null)
-                            throw log(new SecurityException("Invalid SSL master secret"));
-                    } catch (ClassNotFoundException e) {
-                        failedToVerifyMasterSecret(e);
-                    } catch (NoSuchMethodException e) {
-                        failedToVerifyMasterSecret(e);
-                    } catch (IllegalAccessException e) {
-                        failedToVerifyMasterSecret(e);
-                    } catch (InvocationTargetException e) {
-                        failedToVerifyMasterSecret(e.getCause());
-                    }
-                }
-            }
-        }
-        return;
-    }
-
-    private void failedToVerifyMasterSecret(Throwable t) {
-        if (log.isDebugEnabled())
-            log.debug("Failed to verify the SSL master secret", t);
-    }
-
-    private <T extends Throwable> T log(T t) {
-        if (log.isDebugEnabled())
-            log.debug("", t);
-        return t;
     }
 }

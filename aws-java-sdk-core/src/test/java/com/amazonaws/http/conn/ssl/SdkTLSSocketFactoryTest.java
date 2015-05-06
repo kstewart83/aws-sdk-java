@@ -23,8 +23,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import javax.net.ssl.SSLContext;
-
+import org.apache.http.conn.ssl.DefaultHostnameVerifier;
+import org.apache.http.ssl.SSLContexts;
 import org.junit.Test;
 
 public class SdkTLSSocketFactoryTest {
@@ -33,7 +33,11 @@ public class SdkTLSSocketFactoryTest {
      */
     @Test
     public void preparedSocket_NullProtocols() throws NoSuchAlgorithmException {
-        SdkTLSSocketFactory f = new SdkTLSSocketFactory(SSLContext.getDefault(), null);
+        SdkTLSSocketFactory f = new SdkTLSSocketFactory(
+                SSLContexts.createSystemDefault(),
+                new String[] { "TLSv1" },
+                null,
+                new DefaultHostnameVerifier());
         f.prepareSocket(new TestSSLSocket() {
             @Override
             public String[] getSupportedProtocols() {
@@ -52,7 +56,11 @@ public class SdkTLSSocketFactoryTest {
 
     @Test
     public void typical() throws NoSuchAlgorithmException {
-        SdkTLSSocketFactory f = new SdkTLSSocketFactory(SSLContext.getDefault(), null);
+    	SdkTLSSocketFactory f = new SdkTLSSocketFactory(
+                SSLContexts.createSystemDefault(),
+                new String[] { "TLSv1" },
+                null,
+                new DefaultHostnameVerifier());
         f.prepareSocket(new TestSSLSocket() {
             @Override
             public String[] getSupportedProtocols() {
@@ -71,7 +79,11 @@ public class SdkTLSSocketFactoryTest {
 
     @Test
     public void noTLS() throws NoSuchAlgorithmException {
-        SdkTLSSocketFactory f = new SdkTLSSocketFactory(SSLContext.getDefault(), null);
+    	SdkTLSSocketFactory f = new SdkTLSSocketFactory(
+                SSLContexts.createSystemDefault(),
+                new String[] { "TLSv1" },
+                null,
+                new DefaultHostnameVerifier());
         f.prepareSocket(new TestSSLSocket() {
             @Override
             public String[] getSupportedProtocols() {
@@ -91,7 +103,11 @@ public class SdkTLSSocketFactoryTest {
 
     @Test
     public void notIdeal() throws NoSuchAlgorithmException {
-        SdkTLSSocketFactory f = new SdkTLSSocketFactory(SSLContext.getDefault(), null);
+    	SdkTLSSocketFactory f = new SdkTLSSocketFactory(
+                SSLContexts.createSystemDefault(),
+                new String[] { "TLSv1" },
+                null,
+                new DefaultHostnameVerifier());
         f.prepareSocket(new TestSSLSocket() {
             @Override
             public String[] getSupportedProtocols() {

@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.conn.ClientConnectionManager;
+import org.apache.http.conn.HttpClientConnectionManager;
 
 /**
  * Daemon thread to periodically check connection pools for idle connections.
@@ -49,7 +49,7 @@ public final class IdleConnectionReaper extends Thread {
      * The list of registered connection managers, whose connections
      * will be periodically checked and idle connections closed.
      */
-    private static final ArrayList<ClientConnectionManager> connectionManagers = new ArrayList<ClientConnectionManager>();
+    private static final ArrayList<HttpClientConnectionManager> connectionManagers = new ArrayList<HttpClientConnectionManager>();
     /**
      * Set to true when shutting down the reaper;  Once set to true, this
      * flag is never set back to false.
@@ -74,7 +74,7 @@ public final class IdleConnectionReaper extends Thread {
      * @return true if the connection manager has been successfully registered;
      * false otherwise.
      */
-    public static synchronized boolean registerConnectionManager(ClientConnectionManager connectionManager) {
+    public static synchronized boolean registerConnectionManager(HttpClientConnectionManager connectionManager) {
         if (instance == null) {
             instance = new IdleConnectionReaper();
             instance.start();
@@ -89,7 +89,7 @@ public final class IdleConnectionReaper extends Thread {
      * @return true if the connection manager has been successfully removed;
      * false otherwise.
      */
-    public static synchronized boolean removeConnectionManager(ClientConnectionManager connectionManager) {
+    public static synchronized boolean removeConnectionManager(HttpClientConnectionManager connectionManager) {
         boolean b = connectionManagers.remove(connectionManager);
         if (connectionManagers.isEmpty())
             shutdown();
@@ -115,11 +115,11 @@ public final class IdleConnectionReaper extends Thread {
                 // ConcurrentModificationExceptions if registerConnectionManager or
                 // removeConnectionManager are called while we're iterating (rather
                 // than block/lock while this loop executes).
-                List<ClientConnectionManager> connectionManagers = null;
+                List<HttpClientConnectionManager> connectionManagers = null;
                 synchronized (IdleConnectionReaper.class) {
-                    connectionManagers = (List<ClientConnectionManager>)IdleConnectionReaper.connectionManagers.clone();
+                    connectionManagers = (List<HttpClientConnectionManager>)IdleConnectionReaper.connectionManagers.clone();
                 }
-                for (ClientConnectionManager connectionManager : connectionManagers) {
+                for (HttpClientConnectionManager connectionManager : connectionManagers) {
                     // When we release connections, the connection manager leaves them
                     // open so they can be reused.  We want to close out any idle
                     // connections so that they don't sit around in CLOSE_WAIT.

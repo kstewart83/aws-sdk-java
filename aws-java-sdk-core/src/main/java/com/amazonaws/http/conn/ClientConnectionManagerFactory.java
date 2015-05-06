@@ -21,8 +21,8 @@ import java.lang.reflect.Proxy;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.conn.ClientConnectionManager;
-import org.apache.http.conn.ClientConnectionRequest;
+import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.conn.ConnectionRequest;
 import org.apache.http.pool.ConnPoolControl;
 
 public class ClientConnectionManagerFactory {
@@ -33,23 +33,23 @@ public class ClientConnectionManagerFactory {
      * to capture the necessary performance metrics.
      * @param orig the target instance to be wrapped
      */
-    public static ClientConnectionManager wrap(ClientConnectionManager orig) {
+    public static HttpClientConnectionManager wrap(HttpClientConnectionManager orig) {
         if (orig instanceof Wrapped)
             throw new IllegalArgumentException();
         final Class<?>[] interfaces;
         if (orig instanceof ConnPoolControl) {
             interfaces = new Class<?>[] { 
-                    ClientConnectionManager.class,
+            		HttpClientConnectionManager.class,
                     ConnPoolControl.class,
                     Wrapped.class 
             };
         } else {
             interfaces = new Class<?>[] { 
-                    ClientConnectionManager.class,
+            		HttpClientConnectionManager.class,
                     Wrapped.class 
             };
         }
-        return (ClientConnectionManager) Proxy.newProxyInstance(
+        return (HttpClientConnectionManager) Proxy.newProxyInstance(
                 // https://github.com/aws/aws-sdk-java/pull/48#issuecomment-29454423
                 ClientConnectionManagerFactory.class.getClassLoader(),
                 interfaces,
@@ -62,16 +62,16 @@ public class ClientConnectionManagerFactory {
      * further wrapped for capturing performance metrics.
      */
     private static class Handler implements InvocationHandler {
-        private final ClientConnectionManager orig;
-        Handler(ClientConnectionManager real) {
+        private final HttpClientConnectionManager orig;
+        Handler(HttpClientConnectionManager real) {
             this.orig = real;
         }
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             try {
                 Object ret = method.invoke(orig, args);
-                return ret instanceof ClientConnectionRequest
-                     ? ClientConnectionRequestFactory.wrap((ClientConnectionRequest) ret)
+                return ret instanceof ConnectionRequest
+                     ? ClientConnectionRequestFactory.wrap((ConnectionRequest) ret)
                      : ret
                      ;
             } catch (InvocationTargetException e) {
